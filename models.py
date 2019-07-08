@@ -84,28 +84,30 @@ class _netD(nn.Module):
 
         # Convolutional block
         self.conv1 = nn.Sequential(
-            # input shape batch_size x 1 (number of channels) x 40 (mgc dim) x 40 (time)
-            nn.Conv2d(1, 64, 5, stride=2, bias=True),
+            # input shape batch_size x 1 (number of channels) x 25 (mgc dim) x 25 (time)
+            nn.Conv2d(1, 64, 5, stride=1, bias=True),
             nn.BatchNorm2d(64),
             nn.LeakyReLU(0.2, inplace=True),
             
-            # shape [batch_size x 64 x 18 x 18]
+            # shape [batch_size x 64 x 21 x 21]
             nn.Conv2d(64, 128, 5, stride=2, bias=True),
             nn.BatchNorm2d(128),
             nn.LeakyReLU(0.2, inplace=True),
             
-            # shape [batch_size x 128 x 7 x 7]
+            # shape [batch_size x 128 x 9 x 9]
             nn.Conv2d(128, 256, 5, stride=2, bias=True),
             nn.BatchNorm2d(256),
             nn.LeakyReLU(0.2, inplace=True),
 
             # shape [batch_size x 256 x 3 x 3]
-            nn.Conv2d(256, 1, 3, stride=2, bias=True),
+            nn.Conv2d(256, 1, 3, stride=1, bias=True),
             nn.Sigmoid()
             # final output shape [batch_size x 1]
         )
 
     def forward(self, mgc_input):
         output = self.conv1(mgc_input)
-        output = torch.mean(output, -1)    
+        # print(output.size())
+        output = torch.mean(output, -1)
+        # print(output.size())    
         return output.view(-1, 1).squeeze(1)

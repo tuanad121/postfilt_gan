@@ -139,7 +139,7 @@ def parse_args():
     parser.add_argument('--yFilesList', required=True, help='path to output files list')
     parser.add_argument('--workers', type=int, help='number of data loading workers', default=1)
     parser.add_argument('--batchSize', type=int, default=64, help='input batch size')
-    parser.add_argument('--mgcDim', type=int, default=60, help='mel-cepstrum dimension')
+    parser.add_argument('--mgcDim', type=int, default=25, help='mel-cepstrum dimension')
     parser.add_argument('--nz', type=int, default=100, help='size of the latent z vector')
     parser.add_argument('--niter', type=int, default=25, help='number of epochs to train for')
     parser.add_argument('--lr', type=float, default=0.0001, help='learning rate, default=0.0001')

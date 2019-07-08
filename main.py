@@ -57,6 +57,7 @@ def train(netD, netG, data_loader, opt):
                     rand_int = random.randint(0,real_data.size(-1) - opt.mgcDim)
                     real_data_crop = real_data[:,:,:,rand_int:rand_int+opt.mgcDim]
                     label.data.fill_(real_label)
+                    # print(f'shape of real_data_crop {real_data_crop.shape}')
 
                     if opt.cuda:
                         pred_data = pred_data.cuda()
@@ -83,10 +84,14 @@ def train(netD, netG, data_loader, opt):
                     # crop the tensor to fixed size
                     fake_crop = fake[:,:,:,rand_int:rand_int+opt.mgcDim]
                     output = netD(fake_crop.detach())
+                    # print(output.size())
+                    # print(label.size())
                     errD_fake = criterion(output, label)
+                    # print(errD_fake)
+                    # print(errD_real)
                     errD_fake.backward()
                     D_G_z1 = output.data.mean()
-                    errD = errD_real.data[0] + errD_fake.data[0]
+                    errD = errD_real.item() + errD_fake.item()
                 # update the discriminator on mini batch
                 optimizerD.step()
                 
@@ -122,7 +127,7 @@ def train(netD, netG, data_loader, opt):
 
                 print('[%d/%d][%d/%d] Loss_D: %.4f Loss_G: %.4f D(x): %.4f D(G(z)): %.4f / %.4f'
                     %(epoch, opt.niter, i, len(data_loader), 
-                errD, errG.data[0], D_x, D_G_z1, D_G_z2))
+                errD, errG.item(), D_x, D_G_z1, D_G_z2))
                 fake = netG(noise, pred_data)
                 fake = fake + pred_data
                 fake = fake.data.cpu().numpy()
@@ -180,7 +185,7 @@ if __name__ == "__main__":
     parser.add_argument('--yFilesList', required=True, help='path to output files list')
     parser.add_argument('--workers', type=int, help='number of data loading workers', default=2)
     parser.add_argument('--batchSize', type=int, default=64, help='input batch size')
-    parser.add_argument('--mgcDim', type=int, default=60, help='mel-cepstrum dimension')
+    parser.add_argument('--mgcDim', type=int, default=25, help='mel-cepstrum dimension')
     parser.add_argument('--nz', type=int, default=100, help='size of the latent z vector')
     parser.add_argument('--niter', type=int, default=25, help='number of epochs to train for')
     parser.add_argument('--lr', type=float, default=0.0001, help='learning rate, default=0.0001')
@@ -193,8 +198,8 @@ if __name__ == "__main__":
     parser.add_argument('--testdata_dir', type=str, help='path to test data')
     opt = parser.parse_args()
     print(opt)
-
-
+    print(torch.__version__)
+    device = torch.device("cuda:0" if opt.cuda else "cpu")
   # prepare the data loader
     x_files_list_file = opt.xFilesList
     y_files_list_file = opt.yFilesList
@@ -233,13 +238,13 @@ if __name__ == "__main__":
     cudnn.benchmark = False
 
     # define the generator 
-    netG = define_netG(in_ch=2)
+    netG = define_netG(in_ch=2, device=device)
     if opt.netG != '':
         netG.load_state_dict(torch.load(opt.netG))
     print(netG)
 
     # define the discriminator
-    netD = define_netD()
+    netD = define_netD(device=device)
     if opt.netD != '':
         netD.load_state_dict(torch.load(opt.netD))
     print(netD)

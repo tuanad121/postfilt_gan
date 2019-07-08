@@ -44,7 +44,13 @@ class LoadDataset(torch.utils.data.Dataset):
         x_data, no_frames_x = _read_binary_file(x_file, self.in_dim)
         y_data, no_frames_y = _read_binary_file(y_file, self.out_dim)
 
-        assert (no_frames_x == no_frames_y)
+        if not no_frames_x == no_frames_y:
+            assert np.abs(no_frames_x - no_frames_y) <= 5
+            if no_frames_x < no_frames_y:
+                y_data = y_data[:,:no_frames_x]
+            elif no_frames_x > no_frames_y:
+                x_data = x_data[:,:no_frames_y]
+            no_frames_x = no_frames_y
         x_data = x_data.reshape(1,self.in_dim, no_frames_x)
         y_data = y_data.reshape(1,self.out_dim, no_frames_y)
 
@@ -97,10 +103,10 @@ def get_loader(x_files_list, y_files_list, in_dim, out_dim, batch_size,
 
 
 if __name__ == "__main__":
-    x_files_list_file = '/work/t405/T40521/shared/vocomp/nick/straight/ref_files.list'
-    y_files_list_file = '/work/t405/T40521/shared/vocomp/nick/straight/gen_files.list' 
-    in_dim = 60
-    out_dim = 60
+    x_files_list_file = 'ref_files.list'
+    y_files_list_file = 'gen_files.list' 
+    in_dim = 25
+    out_dim = 25
     batch_size = 10
     with open(x_files_list_file, 'r') as fid:
         x_files_list = [l.strip() for l in fid.readlines()]
