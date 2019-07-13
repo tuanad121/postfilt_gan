@@ -3,6 +3,9 @@ from pathlib import Path
 ref_dir = Path('/Users/dintu/zalo_ai/ZaloAi/mgc')
 gen_dir = Path('/Users/dintu/zalo_ai/ZaloAi/syn_feat')
 
+# ref_dir = Path('/Training/tdinh/postfilt_gan/mgc')
+# gen_dir = Path('/Training/tdinh/postfilt_gan/mgc_gen')
+
 gFile = open('gen_files.list', 'w')
 rFile = open('ref_files.list', 'w')
 

@@ -23,8 +23,8 @@ def train(netD, netG, data_loader, opt):
     fake_label = 0
 
     # cost criterion
-    #criterion = nn.BCELoss() # normal gan 
-    criterion = nn.MSELoss() # lsgan
+    criterion = nn.BCELoss() # normal gan 
+    # criterion = nn.MSELoss() # lsgan
 
     if opt.cuda:
         netD.cuda()
