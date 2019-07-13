@@ -2,6 +2,7 @@ import random
 import torch
 import torch.utils.data
 import numpy as np
+from sklearn.preprocessing import StandardScaler
 
 
 # reads the binary file and return the data in ascii format
@@ -13,11 +14,21 @@ def _read_binary_file(fname, dim):
     data = data.T
     return data, data.shape[1]
 
+def prepare_normalizer(list_paths, dim):
+    dataset = []
+    for file_path in list_paths:
+        data, _ = _read_binary_file(file_path, dim)
+        dataset.append(data.T)
+    dataset = np.concatenate(dataset)
+    scaler = StandardScaler().fit(dataset)
+    return scaler
+
+
 class LoadDataset(torch.utils.data.Dataset):
     """
     Custom dataset compatible with torch.utils.data.DataLoader
     """
-    def __init__(self, x_files_list, y_files_list, in_dim, out_dim, shuffle=True):
+    def __init__(self, x_files_list, y_files_list, in_dim, out_dim, x_normalizer, y_normalizer, shuffle=True):
         """Set the path for data
 
         Args:
@@ -35,6 +46,8 @@ class LoadDataset(torch.utils.data.Dataset):
         #     random.shuffle(x_y_files_list)
         # self.x_files_list, self.y_files_list = zip(*x_y_files_list)
         self.x_files_list, self.y_files_list = x_files_list, y_files_list
+        self.x_normalizer = x_normalizer
+        self.y_normalizer = y_normalizer
 
     def __getitem__(self, index):
         """Returns one data pair (x_data, y_data)."""
@@ -43,6 +56,10 @@ class LoadDataset(torch.utils.data.Dataset):
 
         x_data, no_frames_x = _read_binary_file(x_file, self.in_dim)
         y_data, no_frames_y = _read_binary_file(y_file, self.out_dim)
+
+        # normalization
+        x_data = self.x_normalizer.transform(x_data.T).T
+        y_data = self.y_normalizer.transform(y_data.T).T
 
         if not no_frames_x == no_frames_y:
             assert np.abs(no_frames_x - no_frames_y) <= 5
@@ -81,12 +98,14 @@ def collate_fn(batch):
     return in_mgc_padded, out_mgc_padded
 
 def get_loader(x_files_list, y_files_list, in_dim, out_dim, batch_size,
-               shuffle, num_workers):
+               shuffle, num_workers, x_normalizer, y_normalizer):
     # Custom dataset
     data = LoadDataset(x_files_list=x_files_list,
                     y_files_list=y_files_list,
                     in_dim=in_dim,
-                    out_dim=out_dim)
+                    out_dim=out_dim,
+                    x_normalizer=x_normalizer,
+                    y_normalizer=y_normalizer)
     
     # Data loader
     # This will return (x_data, y_data) for every iteration
@@ -116,8 +135,11 @@ if __name__ == "__main__":
     
     x_files_list = x_files_list[0:len(y_files_list)]
 
+    x_normalizer = prepare_normalizer(x_files_list, in_dim)
+    y_normalizer = prepare_normalizer(y_files_list, out_dim)
+
     data_loader = get_loader(x_files_list, y_files_list, 
-                            in_dim, out_dim, batch_size, False, 3)
+                            in_dim, out_dim, batch_size, False, num_workers=3, x_normalizer=x_normalizer, y_normalizer=y_normalizer)
     for _ in range(1):
         for i, (x_data, y_data) in enumerate(data_loader):
             print(i, x_data.size(), y_data.size())

@@ -11,7 +11,7 @@ import torch.optim as optim
 import torch.utils.data
 from torch.autograd import Variable
 
-from data_loader import get_loader
+from data_loader import get_loader, prepare_normalizer
 from utils import plot_feats, read_binary_file
 from models import define_netD, define_netG
 
@@ -91,7 +91,7 @@ def train(netD, netG, data_loader, opt):
                     # print(errD_real)
                     errD_fake.backward()
                     D_G_z1 = output.data.mean()
-                    errD = errD_real.item() + errD_fake.item()
+                    errD = (errD_real.item() + errD_fake.item()) / 2
                 # update the discriminator on mini batch
                 optimizerD.step()
                 
@@ -212,9 +212,11 @@ if __name__ == "__main__":
     with open(y_files_list_file, 'r') as fid:
         y_files_list = [l.strip() for l in fid.readlines()]
     
+    x_normalizer = prepare_normalizer(x_files_list, in_dim)
+    y_normalizer = prepare_normalizer(y_files_list, out_dim)
 
     data_loader = get_loader(x_files_list, y_files_list, 
-                            in_dim, out_dim, 1, True, 0)  
+                            in_dim, out_dim, 1, True, 0, x_normalizer, y_normalizer)  
 
     # prepare the output directories
     try:

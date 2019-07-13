@@ -78,6 +78,16 @@ class _netG(nn.Module):
         return x
 
 
+class Flatten(nn.Module):
+    
+    def __init__(self):
+        super(Flatten, self).__init__()
+
+    def forward(self, x):
+        # shape = torch.prod(torch.tensor(x.shape[1:])).item()
+        return x.view(x.shape[0], -1)
+
+
 class _netD(nn.Module):
     def __init__(self):
         super(_netD, self).__init__()
@@ -101,6 +111,14 @@ class _netD(nn.Module):
 
             # shape [batch_size x 256 x 3 x 3]
             nn.Conv2d(256, 1, 3, stride=1, bias=True),
+            # nn.BatchNorm2d(1),
+            nn.LeakyReLU(0.2, inplace=True),
+
+            # shape [batch_size x 1 x 1 x 1]
+            Flatten(),
+
+            # shape [batch_size x 1]
+            nn.Linear(1,1),
             nn.Sigmoid()
             # final output shape [batch_size x 1]
         )
@@ -108,6 +126,6 @@ class _netD(nn.Module):
     def forward(self, mgc_input):
         output = self.conv1(mgc_input)
         # print(output.size())
-        output = torch.mean(output, -1)
+        # output = torch.mean(output, -1)
         # print(output.size())    
         return output.view(-1, 1).squeeze(1)
