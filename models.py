@@ -94,31 +94,31 @@ class _netD(nn.Module):
 
         # Convolutional block
         self.conv1 = nn.Sequential(
-            # input shape batch_size x 1 (number of channels) x 25 (mgc dim) x 25 (time)
+            # input shape batch_size x 1 (number of channels) x 40 (mgc dim) x 40 (time)
             nn.Conv2d(1, 64, 5, stride=1, bias=True),
             nn.BatchNorm2d(64),
             nn.LeakyReLU(0.2, inplace=True),
             
-            # shape [batch_size x 64 x 21 x 21]
+            # shape [batch_size x 64 x 36 x 36]
             nn.Conv2d(64, 128, 5, stride=2, bias=True),
             nn.BatchNorm2d(128),
             nn.LeakyReLU(0.2, inplace=True),
             
-            # shape [batch_size x 128 x 9 x 9]
-            nn.Conv2d(128, 256, 5, stride=2, bias=True),
+            # shape [batch_size x 128 x 16 x 16]
+            nn.Conv2d(128, 256, 3, stride=2, bias=True),
             nn.BatchNorm2d(256),
             nn.LeakyReLU(0.2, inplace=True),
 
-            # shape [batch_size x 256 x 3 x 3]
-            nn.Conv2d(256, 1, 3, stride=1, bias=True),
-            # nn.BatchNorm2d(1),
+            # shape [batch_size x 256 x 7 x 7]
+            nn.Conv2d(256, 128, 3, stride=1, bias=True),
+            nn.BatchNorm2d(128),
             nn.LeakyReLU(0.2, inplace=True),
 
-            # shape [batch_size x 1 x 1 x 1]
+            # shape [batch_size x 128 x 3 x 3]
             Flatten(),
 
             # shape [batch_size x 1]
-            nn.Linear(1,1),
+            nn.Linear(3200,1),
             nn.Sigmoid()
             # final output shape [batch_size x 1]
         )
