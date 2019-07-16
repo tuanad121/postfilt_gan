@@ -9,7 +9,7 @@ from sklearn.preprocessing import StandardScaler
 def _read_binary_file(fname, dim):
     with open(fname, 'rb') as fid:
         data = np.fromfile(fid, dtype=np.float32)
-    assert data.shape[0] % dim == 0.0
+    assert data.shape[0] % dim == 0.0, print(f'data_dim = {data.shape[0]}, required_dim = {dim}')
     data = data.reshape(-1, dim)
     data = data.T
     return data, data.shape[1]
