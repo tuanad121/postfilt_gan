@@ -91,7 +91,7 @@ def train(netD, netG, data_loader, opt):
                     # print(errD_real)
                     errD_fake.backward()
                     D_G_z1 = output.data.mean()
-                    errD = (errD_real.item() + errD_fake.item()) / 2
+                    errD = (errD_real.item() + errD_fake.item())
                 # update the discriminator on mini batch
                 optimizerD.step()
                 
@@ -185,7 +185,7 @@ if __name__ == "__main__":
     parser.add_argument('--yFilesList', required=True, help='path to output files list')
     parser.add_argument('--workers', type=int, help='number of data loading workers', default=2)
     parser.add_argument('--batchSize', type=int, default=64, help='input batch size')
-    parser.add_argument('--mgcDim', type=int, default=25, help='mel-cepstrum dimension')
+    parser.add_argument('--mgcDim', type=int, default=40, help='mel-cepstrum dimension')
     parser.add_argument('--nz', type=int, default=100, help='size of the latent z vector')
     parser.add_argument('--niter', type=int, default=25, help='number of epochs to train for')
     parser.add_argument('--lr', type=float, default=0.0001, help='learning rate, default=0.0001')
