@@ -23,8 +23,8 @@ def train(netD, netG, data_loader, opt):
     fake_label = 0
 
     # cost criterion
-    # criterion = nn.BCELoss() # normal gan 
-    criterion = nn.MSELoss() # lsgan
+    criterion = nn.BCELoss() # normal gan 
+    # criterion = nn.MSELoss() # lsgan
 
     if opt.cuda:
         netD.cuda()
@@ -45,36 +45,6 @@ def train(netD, netG, data_loader, opt):
                     continue
                 batch_data.append(data)
             else:
-                netG.zero_grad()
-                for d in batch_data:
-                    real_data, pred_data = d
-                    rand_int = random.randint(0,real_data.size(-1) - opt.mgcDim)
-                    # train with fake 
-                    noise = torch.FloatTensor(real_data.size()).normal_(0,1)
-                    if opt.cuda:
-                        pred_data = pred_data.cuda()
-                        noise = noise.cuda()
-                    pred_data = Variable(pred_data, requires_grad=False)
-                    noise = Variable(noise, requires_grad=False)
-                    fake = netG(noise, pred_data)
-                    # add the residual to the tts predicted data 
-                    fake = fake + pred_data
-                    # label.data.fill_(fake_label)
-                    # crop the tensor to fixed size
-                    fake_crop = fake[:,:,:,rand_int:rand_int+opt.mgcDim]
-                    #print(fake_crop.size())
-                    # crop the tensor to fixed size
-                    
-                    ############################
-                    # (2) Update G network: maximize log(D(G(z)))
-                    ############################
-                    label.data.fill_(real_label) # fake labels are real for generator cost
-                    output = netD(fake_crop)
-                    errG = criterion(output, label)
-                    errG.backward()
-                    D_G_z2 = output.data.mean()
-                optimizerG.step()
-
                 # clear the gradient buffers
                 netD.zero_grad()
                 for d in batch_data:
@@ -119,12 +89,48 @@ def train(netD, netG, data_loader, opt):
                     errD_fake = criterion(output, label)
                     # print(errD_fake)
                     # print(errD_real)
-                    d_loss = 0.5 * (errD_real + errD_fake)
+                    d_loss = (errD_real + errD_fake)  # * 0.5
                     d_loss.backward()
                     D_G_z1 = output.data.mean()
-                    errD = (errD_real.item() + errD_fake.item()) * 0.5
+                    errD = (errD_real.item() + errD_fake.item())  # * 0.5
                 # update the discriminator on mini batch
                 optimizerD.step()
+
+                netG.zero_grad()
+                for d in batch_data:
+                    real_data, pred_data = d
+                    rand_int = random.randint(0,real_data.size(-1) - opt.mgcDim)
+                    # train with fake 
+                    noise = torch.FloatTensor(real_data.size()).normal_(0,1)
+                    if opt.cuda:
+                        pred_data = pred_data.cuda()
+                        real_data = real_data.cuda()
+                        noise = noise.cuda()
+                    pred_data = Variable(pred_data, requires_grad=False)
+                    noise = Variable(noise, requires_grad=False)
+                    real_data = Variable(real_data, requires_grad=False)
+
+                    fake = netG(noise, pred_data)
+                    # add the residual to the tts predicted data 
+                    fake = fake + pred_data
+                    errRes = nn.MSELoss()(fake, real_data)
+
+                    # label.data.fill_(fake_label)
+                    # crop the tensor to fixed size
+                    fake_crop = fake[:,:,:,rand_int:rand_int+opt.mgcDim]
+                    #print(fake_crop.size())
+                    # crop the tensor to fixed size
+                    
+                    ############################
+                    # (2) Update G network: maximize log(D(G(z)))
+                    ############################
+                    label.data.fill_(real_label) # fake labels are real for generator cost
+                    output = netD(fake_crop)
+                    errG = criterion(output, label)
+                    g_loss = errRes + errG
+                    g_loss.backward()
+                    D_G_z2 = output.data.mean()
+                optimizerG.step()
 
                 print('[%d/%d][%d/%d] Loss_D: %.4f Loss_G: %.4f D(x): %.4f D(G(z)): %.4f / %.4f'
                     %(epoch, opt.niter, i, len(data_loader), 
