@@ -40,38 +40,35 @@ class LoadDataset(torch.utils.data.Dataset):
         self.in_dim = in_dim
         self.out_dim = out_dim
         assert len(x_files_list) == len(y_files_list)
-        # x_y_files_list = zip(x_files_list, y_files_list)
-        # random.seed(1234)
-        # if shuffle:
-        #     random.shuffle(x_y_files_list)
-        # self.x_files_list, self.y_files_list = zip(*x_y_files_list)
         self.x_files_list, self.y_files_list = x_files_list, y_files_list
         self.x_normalizer = x_normalizer
         self.y_normalizer = y_normalizer
 
     def __getitem__(self, index):
         """Returns one data pair (x_data, y_data)."""
-        x_file = self.x_files_list[index]
-        y_file = self.y_files_list[index]
+        ref_file = self.x_files_list[index]
+        gen_file = self.y_files_list[index]
+        n_frames = 200
 
-        x_data, no_frames_x = _read_binary_file(x_file, self.in_dim)
-        y_data, no_frames_y = _read_binary_file(y_file, self.out_dim)
+        ref_data, no_frames_x = _read_binary_file(ref_file, self.in_dim)
+        gen_data, no_frames_y = _read_binary_file(gen_file, self.out_dim)
+
+        min_no_frame = min(no_frames_x, no_frames_y)
+        assert min_no_frame > n_frames
+
+        st = np.random.randint(min_no_frame - n_frames + 1)
+        en = st + n_frames
+        ref_data = ref_data[:, st: en]
+        gen_data = gen_data[:, st: en]
 
         # normalization
-        x_data = self.x_normalizer.transform(x_data.T).T
-        y_data = self.y_normalizer.transform(y_data.T).T
+        ref_data = self.x_normalizer.transform(ref_data.T).T
+        gen_data = self.y_normalizer.transform(gen_data.T).T
 
-        if not no_frames_x == no_frames_y:
-            assert np.abs(no_frames_x - no_frames_y) <= 5
-            if no_frames_x < no_frames_y:
-                y_data = y_data[:,:no_frames_x]
-            elif no_frames_x > no_frames_y:
-                x_data = x_data[:,:no_frames_y]
-            no_frames_x = no_frames_y
-        x_data = x_data.reshape(1,self.in_dim, no_frames_x)
-        y_data = y_data.reshape(1,self.out_dim, no_frames_y)
+        ref_data = ref_data.reshape(1,self.in_dim, n_frames)
+        gen_data = gen_data.reshape(1,self.out_dim, n_frames)
 
-        return (torch.FloatTensor(x_data), torch.FloatTensor(y_data))
+        return (torch.FloatTensor(ref_data), torch.FloatTensor(gen_data))
     
     def __len__(self):
         return len(self.x_files_list)
@@ -124,8 +121,8 @@ def get_loader(x_files_list, y_files_list, in_dim, out_dim, batch_size,
 if __name__ == "__main__":
     x_files_list_file = 'ref_files.list'
     y_files_list_file = 'gen_files.list' 
-    in_dim = 25
-    out_dim = 25
+    in_dim = 40
+    out_dim = 40
     batch_size = 10
     with open(x_files_list_file, 'r') as fid:
         x_files_list = [l.strip() for l in fid.readlines()]
