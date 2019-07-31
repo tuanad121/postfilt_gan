@@ -51,7 +51,7 @@ def train(netD, netG, data_loader, opt):
             # crop the tensor to fixed size
             rand_int = random.randint(0,real_data.size(-1) - opt.mgcDim)
             real_data_crop = real_data[:,:,:,rand_int:rand_int+opt.mgcDim]
-            label = torch.full((opt.batchSize,), real_label)
+            label = torch.full((real_data.size(0),), real_label)
             # print(f'shape of real_data_crop {real_data_crop.shape}')
 
             if opt.cuda:
@@ -74,7 +74,7 @@ def train(netD, netG, data_loader, opt):
             fake = netG(noise, pred_data)
             # add the residual to the tts predicted data 
             fake = fake + pred_data
-            label = torch.full((opt.batchSize,), fake_label)
+            label = torch.full((real_data.size(0),), fake_label)
             # crop the tensor to fixed size
             fake_crop = fake[:,:,:,rand_int:rand_int+opt.mgcDim]
             output = netD(fake_crop.detach())
@@ -109,7 +109,7 @@ def train(netD, netG, data_loader, opt):
             ############################
             # (2) Update G network: maximize log(D(G(z)))
             ############################
-            label = torch.full((opt.batchSize,), real_label)  # fake labels are real for generator cost
+            label = torch.full((real_data.size(0),), real_label)  # fake labels are real for generator cost
             output = netD(fake_crop)
             errG = criterion(output, label)
             if 0:
@@ -211,7 +211,7 @@ if __name__ == "__main__":
     y_normalizer = prepare_normalizer(y_files_list, out_dim)
 
     data_loader = get_loader(x_files_list, y_files_list, 
-                            in_dim, out_dim, opt.batchSize, True, 0, x_normalizer, y_normalizer)  
+                            in_dim, out_dim, opt.batchSize, False, 10, x_normalizer, y_normalizer)  
 
     # prepare the output directories
     try:

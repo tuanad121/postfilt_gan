@@ -113,7 +113,7 @@ def get_loader(x_files_list, y_files_list, in_dim, out_dim, batch_size,
                                               batch_size=batch_size,
                                               sampler=sampler,
                                               num_workers=num_workers,
-                                              shuffle=False,
+                                              shuffle=shuffle,
                                               collate_fn=collate_fn)
     return data_loader
 
