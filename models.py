@@ -118,6 +118,7 @@ class _netD(nn.Module):
             Flatten(),
 
             # shape [batch_size x 1]
+            nn.Dropout(0.4),
             nn.Linear(3200,1),
             nn.Sigmoid()
             # final output shape [batch_size x 1]
