@@ -19,7 +19,7 @@ from models import define_netD, define_netG
 def train(netD, netG, data_loader, opt):
     label = torch.FloatTensor(1)
     label = Variable(label, requires_grad=False)
-    real_label = 1
+    real_label = 0.9
     fake_label = 0
 
     # cost criterion
@@ -79,7 +79,7 @@ def train(netD, netG, data_loader, opt):
             fake_crop = fake[:,:,:,rand_int:rand_int+opt.mgcDim]
             output = netD(fake_crop.detach())
             errD_fake = criterion(output, label)
-            d_loss = (errD_real + errD_fake)  # * 0.5
+            d_loss = (errD_real + errD_fake) * 0.5
             d_loss.backward()
             D_G_z1 = output.data.mean()
             errD = (errD_real.item() + errD_fake.item())  # * 0.5
@@ -182,7 +182,7 @@ if __name__ == "__main__":
     parser.add_argument('--batchSize', type=int, default=64, help='input batch size')
     parser.add_argument('--mgcDim', type=int, default=40, help='mel-cepstrum dimension')
     parser.add_argument('--nz', type=int, default=100, help='size of the latent z vector')
-    parser.add_argument('--niter', type=int, default=50, help='number of epochs to train for')
+    parser.add_argument('--niter', type=int, default=30, help='number of epochs to train for')
     parser.add_argument('--lr', type=float, default=0.0001, help='learning rate, default=0.0001')
     parser.add_argument('--beta1', type=float, default=0.5, help='beta1 for adam. default=0.9')
     parser.add_argument('--cuda', action='store_true', help='enables cuda')
