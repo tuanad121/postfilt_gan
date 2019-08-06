@@ -149,7 +149,7 @@ def train(netD, netG, data_loader, opt):
             del noise, real_data_crop, fake, fake_crop, output, errD
 
         # do checkpointing
-        if epoch % 10 == 0:
+        if epoch % 40 == 0:
             torch.save(netG.state_dict(), '%s/netG_epoch_%d.pth' %(opt.outf, epoch))
             torch.save(netD.state_dict(), '%s/netD_epoch_%d.pth' %(opt.outf, epoch))
 
