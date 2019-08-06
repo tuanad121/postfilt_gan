@@ -19,12 +19,12 @@ from models import define_netD, define_netG
 def train(netD, netG, data_loader, opt):
     label = torch.FloatTensor(1)
     label = Variable(label, requires_grad=False)
-    real_label = 0.9
+    real_label = 1
     fake_label = 0
 
     # cost criterion
-    criterion = nn.BCELoss() # normal gan 
-    # criterion = nn.MSELoss() # lsgan
+    # criterion = nn.BCELoss() # normal gan 
+    criterion = nn.MSELoss() # lsgan
 
     if opt.cuda:
         netD.cuda()
@@ -32,8 +32,8 @@ def train(netD, netG, data_loader, opt):
         criterion.cuda()
     
     # setup optimizer
-    optimizerD = optim.Adam(netD.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
-    optimizerG = optim.Adam(netG.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999))
+    optimizerD = optim.Adam(netD.parameters(), lr=0.0001, betas=(0.5, 0.999))
+    optimizerG = optim.Adam(netG.parameters(), lr=0.0002, betas=(0.5, 0.999))
     print('batch size =', opt.batchSize)
     for epoch in range(opt.niter):
         # store mini-batch data in list
@@ -51,7 +51,7 @@ def train(netD, netG, data_loader, opt):
             # crop the tensor to fixed size
             rand_int = random.randint(0,real_data.size(-1) - opt.mgcDim)
             real_data_crop = real_data[:,:,:,rand_int:rand_int+opt.mgcDim]
-            label = torch.full((real_data.size(0),), real_label)
+            # label = torch.full((real_data.size(0),), real_label)
             # print(f'shape of real_data_crop {real_data_crop.shape}')
 
             if opt.cuda:
@@ -63,7 +63,8 @@ def train(netD, netG, data_loader, opt):
             real_data_crop = Variable(real_data_crop, requires_grad=False)
             
             output = netD(real_data_crop)
-            errD_real = criterion(output, label)
+            # errD_real = criterion(output, label)
+            errD_real =  torch.mean((real_label - output) ** 2)
             D_x = output.data.mean()
 
             # train with fake 
@@ -74,15 +75,17 @@ def train(netD, netG, data_loader, opt):
             fake = netG(noise, pred_data)
             # add the residual to the tts predicted data 
             fake = fake + pred_data
-            label = torch.full((real_data.size(0),), fake_label)
+            # label = torch.full((real_data.size(0),), fake_label)
             # crop the tensor to fixed size
             fake_crop = fake[:,:,:,rand_int:rand_int+opt.mgcDim]
             output = netD(fake_crop.detach())
-            errD_fake = criterion(output, label)
-            d_loss = (errD_real + errD_fake) * 0.5
+            # errD_fake = criterion(output, label)
+            errD_fake = torch.mean((fake_label - output) ** 2)
+
+            d_loss = (errD_real + errD_fake) / 2.0
             d_loss.backward()
             D_G_z1 = output.data.mean()
-            errD = (errD_real.item() + errD_fake.item())  # * 0.5
+            errD = (errD_real.item() + errD_fake.item())  / 2.0
             # update the discriminator on mini batch
             optimizerD.step()
 
@@ -109,9 +112,11 @@ def train(netD, netG, data_loader, opt):
             ############################
             # (2) Update G network: maximize log(D(G(z)))
             ############################
-            label = torch.full((real_data.size(0),), real_label)  # fake labels are real for generator cost
+            # label = torch.full((real_data.size(0),), real_label)  # fake labels are real for generator cost
             output = netD(fake_crop)
-            errG = criterion(output, label)
+            # errG = criterion(output, label)
+            errG = torch.mean((real_label - output) ** 2)
+
             if 0:
                 errRes = nn.MSELoss()(fake, real_data)
                 g_loss = errRes + errG
@@ -144,8 +149,9 @@ def train(netD, netG, data_loader, opt):
             del noise, real_data_crop, fake, fake_crop, output, errD
 
         # do checkpointing
-        torch.save(netG.state_dict(), '%s/netG_epoch_%d.pth' %(opt.outf, epoch))
-        torch.save(netD.state_dict(), '%s/netD_epoch_%d.pth' %(opt.outf, epoch))
+        if epoch % 10 == 0:
+            torch.save(netG.state_dict(), '%s/netG_epoch_%d.pth' %(opt.outf, epoch))
+            torch.save(netD.state_dict(), '%s/netD_epoch_%d.pth' %(opt.outf, epoch))
 
 def test(netG, opt):
     assert opt.netG != ''
@@ -182,7 +188,7 @@ if __name__ == "__main__":
     parser.add_argument('--batchSize', type=int, default=64, help='input batch size')
     parser.add_argument('--mgcDim', type=int, default=40, help='mel-cepstrum dimension')
     parser.add_argument('--nz', type=int, default=100, help='size of the latent z vector')
-    parser.add_argument('--niter', type=int, default=30, help='number of epochs to train for')
+    parser.add_argument('--niter', type=int, default=2000, help='number of epochs to train for')
     parser.add_argument('--lr', type=float, default=0.0001, help='learning rate, default=0.0001')
     parser.add_argument('--beta1', type=float, default=0.5, help='beta1 for adam. default=0.9')
     parser.add_argument('--cuda', action='store_true', help='enables cuda')

@@ -62,8 +62,8 @@ class LoadDataset(torch.utils.data.Dataset):
         gen_data = gen_data[:, st: en]
 
         # normalization
-        # ref_data = self.x_normalizer.transform(ref_data.T).T
-        # gen_data = self.y_normalizer.transform(gen_data.T).T
+        ref_data = self.x_normalizer.transform(ref_data.T).T
+        gen_data = self.y_normalizer.transform(gen_data.T).T
 
         ref_data = ref_data.reshape(1,self.in_dim, n_frames)
         gen_data = gen_data.reshape(1,self.out_dim, n_frames)
