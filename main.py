@@ -150,6 +150,7 @@ def train(netD, netG, data_loader, opt):
             
             del errD_fake, errD_real, errG, real_data, pred_data, 
             del noise, real_data_crop, fake, fake_crop, output, errD
+            torch.cuda.empty_cache()
 
         # do checkpointing
         if (epoch % 40 == 0) and (epoch != 0):
