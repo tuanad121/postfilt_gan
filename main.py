@@ -128,28 +128,31 @@ def train(netD, netG, data_loader, opt):
 
             print('[%d/%d][%d/%d] Loss_D: %.4f Loss_G: %.4f D(x): %.4f D(G(z)): %.4f / %.4f'
                 %(epoch, opt.niter, i, len(data_loader), 
-            errD, errG.item(), D_x, D_G_z1, D_G_z2))
-            fake = netG(noise, pred_data)
-            fake = fake + pred_data
-            fake = fake.data.cpu().numpy()
-            fake = fake.reshape(opt.mgcDim, -1)
-            fake = fake[:,rand_int:rand_int+opt.mgcDim]
-                
-            pred = pred_data.data.cpu().numpy()
-            pred = pred.reshape(opt.mgcDim, -1)
-            pred = pred[:,rand_int:rand_int+opt.mgcDim]
-                
-            real = real_data.cpu().numpy()
-            real = real.reshape(opt.mgcDim, -1)
-            real = real[:,rand_int:rand_int+opt.mgcDim]
-            plot_feats(real, pred, fake,  epoch, i, opt.outf)
+            
+            
+            if (epoch % 20 == 0) and (epoch != 0):
+                errD, errG.item(), D_x, D_G_z1, D_G_z2))
+                fake = netG(noise, pred_data)
+                fake = fake + pred_data
+                fake = fake.data.cpu().numpy()
+                fake = fake.reshape(opt.mgcDim, -1)
+                fake = fake[:,rand_int:rand_int+opt.mgcDim]
+                    
+                pred = pred_data.data.cpu().numpy()
+                pred = pred.reshape(opt.mgcDim, -1)
+                pred = pred[:,rand_int:rand_int+opt.mgcDim]
+                    
+                real = real_data.cpu().numpy()
+                real = real.reshape(opt.mgcDim, -1)
+                real = real[:,rand_int:rand_int+opt.mgcDim]
+                plot_feats(real, pred, fake,  epoch, i, opt.outf)
             
             
             del errD_fake, errD_real, errG, real_data, pred_data, 
             del noise, real_data_crop, fake, fake_crop, output, errD
 
         # do checkpointing
-        if epoch % 40 == 0:
+        if (epoch % 40 == 0) and (epoch != 0):
             torch.save(netG.state_dict(), '%s/netG_epoch_%d.pth' %(opt.outf, epoch))
             torch.save(netD.state_dict(), '%s/netD_epoch_%d.pth' %(opt.outf, epoch))
 
