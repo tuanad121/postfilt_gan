@@ -127,11 +127,11 @@ def train(netD, netG, data_loader, opt):
             optimizerG.step()
 
             print('[%d/%d][%d/%d] Loss_D: %.4f Loss_G: %.4f D(x): %.4f D(G(z)): %.4f / %.4f'
-                %(epoch, opt.niter, i, len(data_loader), 
-            
+                %(epoch, opt.niter, i, len(data_loader),
+                errD, errG.item(), D_x, D_G_z1, D_G_z2))
             
             if (epoch % 20 == 0) and (epoch != 0):
-                errD, errG.item(), D_x, D_G_z1, D_G_z2))
+                
                 fake = netG(noise, pred_data)
                 fake = fake + pred_data
                 fake = fake.data.cpu().numpy()
