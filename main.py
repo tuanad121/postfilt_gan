@@ -39,80 +39,54 @@ def train(netD, netG, data_loader, opt):
         # store mini-batch data in list
         for i, (real_data, pred_data) in enumerate(data_loader):
             # print(real_data.shape, pred_data.shape)
-
-            # clear the gradient buffers
-            netD.zero_grad()
-            
             #################################
             # (1) Updata D network: maximize log(D(x)) + log(1 - D(G(z)))
             #################################
-            # train with real 
+            # clear the gradient buffers
+            netD.zero_grad()
 
             # crop the tensor to fixed size
             rand_int = random.randint(0,real_data.size(-1) - opt.mgcDim)
             real_data_crop = real_data[:,:,:,rand_int:rand_int+opt.mgcDim]
             # label = torch.full((real_data.size(0),), real_label)
             # print(f'shape of real_data_crop {real_data_crop.shape}')
-
+            noise = torch.FloatTensor(real_data.size()).normal_(0,1)
             if opt.cuda:
                 pred_data = pred_data.cuda()
-                label = label.cuda()
+                # label = label.cuda()
                 real_data_crop = real_data_crop.cuda()
+                noise = noise.cuda()
 
-            pred_data = Variable(pred_data, requires_grad=False)
-            real_data_crop = Variable(real_data_crop, requires_grad=False)
-            
+            pred_data = Variable(pred_data)
+            real_data_crop = Variable(real_data_crop)
+
+            # train with real
             output = netD(real_data_crop)
             # errD_real = criterion(output, label)
-            errD_real =  torch.mean((real_label - output) ** 2)
+            errD_real = torch.mean((real_label - output) ** 2)
+            errD_real.backward()
             D_x = output.data.mean()
 
             # train with fake 
-            noise = torch.FloatTensor(real_data.size()).normal_(0,1)
-            if opt.cuda:
-                noise = noise.cuda()
-            noise = Variable(noise, requires_grad=False)
             fake = netG(noise, pred_data)
             # add the residual to the tts predicted data 
             fake = fake + pred_data
-            # label = torch.full((real_data.size(0),), fake_label)
             # crop the tensor to fixed size
             fake_crop = fake[:,:,:,rand_int:rand_int+opt.mgcDim]
             output = netD(fake_crop.detach())
             # errD_fake = criterion(output, label)
             errD_fake = torch.mean((fake_label - output) ** 2)
+            errD_fake.backward()
 
-            d_loss = (errD_real + errD_fake) / 2.0
-            d_loss.backward()
             D_G_z1 = output.data.mean()
-            errD = (errD_real.item() + errD_fake.item())  / 2.0
+            errD = (errD_real.item() + errD_fake.item())
             # update the discriminator on mini batch
             optimizerD.step()
-
-            netG.zero_grad()
-            rand_int = random.randint(0,real_data.size(-1) - opt.mgcDim)
-            # train with fake 
-            noise = torch.FloatTensor(real_data.size()).normal_(0,1)
-            if opt.cuda:
-                pred_data = pred_data.cuda()
-                real_data = real_data.cuda()
-                noise = noise.cuda()
-            pred_data = Variable(pred_data, requires_grad=False)
-            noise = Variable(noise, requires_grad=False)
-            real_data = Variable(real_data, requires_grad=False)
-
-            fake = netG(noise, pred_data)
-            # add the residual to the tts predicted data 
-            fake = fake + pred_data
-
-            # label.data.fill_(fake_label)
-            # crop the tensor to fixed size
-            fake_crop = fake[:,:,:,rand_int:rand_int+opt.mgcDim]
             
             ############################
             # (2) Update G network: maximize log(D(G(z)))
             ############################
-            # label = torch.full((real_data.size(0),), real_label)  # fake labels are real for generator cost
+            netG.zero_grad()
             output = netD(fake_crop)
             # errG = criterion(output, label)
             errG = torch.mean((real_label - output) ** 2)
