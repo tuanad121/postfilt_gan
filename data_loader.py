@@ -48,7 +48,7 @@ class LoadDataset(torch.utils.data.Dataset):
         """Returns one data pair (x_data, y_data)."""
         ref_file = self.x_files_list[index]
         gen_file = self.y_files_list[index]
-        n_frames = 200
+        n_frames = 300
 
         ref_data, no_frames_x = _read_binary_file(ref_file, self.in_dim)
         gen_data, no_frames_y = _read_binary_file(gen_file, self.out_dim)

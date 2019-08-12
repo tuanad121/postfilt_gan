@@ -19,10 +19,15 @@ def define_netD(device):
     netD.apply(weights_init)
     return netD
 
-def define_netG(in_ch,device):
+def define_netG(in_ch, device):
     netG = _netG(in_ch).to(device)
     netG.apply(weights_init)
     return netG
+
+def define_netCNN(device):
+    netCNN = _netCNN(1).to(device)
+    netCNN.apply(weights_init)
+    return netCNN
 
 ################
 ## Classes ###
@@ -130,3 +135,53 @@ class _netD(nn.Module):
         # output = torch.mean(output, -1)
         # print(output.size())    
         return output.view(-1, 1).squeeze(1)
+
+
+class _netCNN(nn.Module):
+    def __init__(self, in_ch):
+        super().__init__()
+        self.in_ch = in_ch
+
+        # Convolutional 1
+        self.conv1 = nn.Sequential(
+            # input shape [batch_size x 2 (noise + input mel-cepstrum) x 40 (mgc dim) x T]
+            nn.Conv2d(in_ch, 128, 5, stride=1, padding=2, bias=True),
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU(0.2, inplace=True))
+
+        # Convolutional 2
+        # input shape [batch_size x 128 + input mel-cepstrum x 40 x T]
+        self.conv2 = nn.Sequential(
+            nn.Conv2d(129, 256, 5, padding=2, bias=True),
+            nn.BatchNorm2d(256),
+            nn.LeakyReLU(0.2, inplace=True))
+
+        # Convolutioanl 3
+        # input shape [batch_size x 256 + input mel-cepstrum x 40 x T]
+        self.conv3 = nn.Sequential(
+            nn.Conv2d(257, 128, 5, padding=2, bias=True),
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU(0.2, inplace=True))
+
+        # Convolutional 4
+        # input shape [batch_size x 128 + input mel-cepstrum x 40 x T]
+        self.conv4 = nn.Sequential(
+            nn.Conv2d(129, 1, 5, padding=2, bias=True),
+            #nn.Tanh()
+        )
+        # final output shape [batch_size x 1 x 40 x T]
+
+    def forward(self, cond_input):
+        x = cond_input
+
+        x = self.conv1(x)
+        x = torch.cat((x, cond_input), 1)
+
+        x = self.conv2(x)
+        x = torch.cat((x, cond_input), 1)
+
+        x = self.conv3(x)
+        x = torch.cat((x, cond_input), 1)
+
+        x = self.conv4(x)
+        return x
