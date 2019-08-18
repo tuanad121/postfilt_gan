@@ -124,7 +124,7 @@ class _netD(nn.Module):
 
             # shape [batch_size x 1]
             nn.Dropout(0.4),
-            nn.Linear(44800,1), #  3200 
+            nn.Linear(3200,1),
             nn.Sigmoid()
             # final output shape [batch_size x 1]
         )
