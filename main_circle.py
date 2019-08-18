@@ -131,6 +131,9 @@ def train(netD_A, netD_B, netG_AB, netG_BA, data_loader, opt, device):
             generated_B = generated_B + pred_data
             d_fake_B = netD_B(generated_B[:,:,:,rand_int:rand_int+opt.mgcDim])
 
+            D_r_A, D_f_A = d_real_A.mean().item(), d_fake_A.mean().item()
+            D_r_B, D_f_B = d_real_B.mean().item(), d_fake_B.mean().item()
+
             # Loss Function
             d_loss_A_real = torch.mean((1 - d_real_A) ** 2)
             d_loss_A_fake = torch.mean((0 - d_fake_A) ** 2)
@@ -148,9 +151,9 @@ def train(netD_A, netD_B, netG_AB, netG_BA, data_loader, opt, device):
             d_loss.backward()
             optimizerD.step()
 
-            print('[%d/%d][%d/%d] Loss_D: %.4f Loss_G: %.4f'
+            print('[%d/%d][%d/%d] Loss_D: %.4f Loss_G: %.4f, D_r_A/D_f_A: %.4f/%.4f D_r_B/D_f_B: %.4f/%.4f'
                 %(epoch, opt.niter, i, len(data_loader),
-                d_loss.item(), g_loss.item()))
+                d_loss.item(), g_loss.item(), D_r_A, D_f_A, D_r_B, D_f_B))
             
             if (epoch % 20 == 0) and (epoch != 0):
                 
