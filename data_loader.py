@@ -18,7 +18,7 @@ def prepare_normalizer(list_paths, dim):
     dataset = []
     for file_path in list_paths:
         data, _ = _read_binary_file(file_path, dim)
-        dataset.append(data.T)
+        dataset.append(data[1:,:].T)
     dataset = np.concatenate(dataset)
     scaler = StandardScaler().fit(dataset)
     return scaler
@@ -58,15 +58,17 @@ class LoadDataset(torch.utils.data.Dataset):
 
         st = np.random.randint(min_no_frame - n_frames + 1)
         en = st + n_frames
-        ref_data = ref_data[:, st: en]
-        gen_data = gen_data[:, st: en]
+        ref_data = ref_data[1:, st: en]
+        gen_data = gen_data[1:, st: en]
+
+        data_dim = ref_data.shape[0]
 
         # normalization
         ref_data = self.x_normalizer.transform(ref_data.T).T
         gen_data = self.y_normalizer.transform(gen_data.T).T
 
-        ref_data = ref_data.reshape(1,self.in_dim, n_frames)
-        gen_data = gen_data.reshape(1,self.out_dim, n_frames)
+        ref_data = ref_data.reshape(1,data_dim, n_frames)
+        gen_data = gen_data.reshape(1,data_dim, n_frames)
 
         return (torch.FloatTensor(ref_data), torch.FloatTensor(gen_data))
     

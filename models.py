@@ -90,6 +90,7 @@ class Flatten(nn.Module):
 
     def forward(self, x):
         # shape = torch.prod(torch.tensor(x.shape[1:])).item()
+        # print(x.shape)
         return x.view(x.shape[0], -1)
 
 
