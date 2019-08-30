@@ -1,7 +1,7 @@
 from pathlib import Path
 
-ref_dir = Path('/Users/dintu/zalo_ai/postfilt_gan/mgc')
-gen_dir = Path('/Users/dintu/zalo_ai/postfilt_gan/mgc_gen')
+ref_dir = Path('/Users/dintu/zalo_ai/postfilt_gan/natural_mgc')
+gen_dir = Path('/Users/dintu/zalo_ai/postfilt_gan/synthesized_mgc')
 
 # ref_dir = Path('/Training/tdinh/postfilt_gan/mgc')
 # gen_dir = Path('/Training/tdinh/postfilt_gan/mgc_gen')
