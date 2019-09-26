@@ -48,13 +48,13 @@ class LoadDataset(torch.utils.data.Dataset):
         """Returns one data pair (x_data, y_data)."""
         ref_file = self.x_files_list[index]
         gen_file = self.y_files_list[index]
-        n_frames = 300
+        n_frames = 150
 
         ref_data, no_frames_x = _read_binary_file(ref_file, self.in_dim)
         gen_data, no_frames_y = _read_binary_file(gen_file, self.out_dim)
 
         min_no_frame = min(no_frames_x, no_frames_y)
-        assert min_no_frame > n_frames
+        assert min_no_frame >= n_frames, print(min_no_frame)
 
         st = np.random.randint(min_no_frame - n_frames + 1)
         en = st + n_frames
