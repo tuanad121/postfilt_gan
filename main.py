@@ -73,6 +73,9 @@ def train(netD, netG, data_loader, opt):
             fake = fake + pred_data
             # crop the tensor to fixed size
             fake_crop = fake[:,:,:,rand_int:rand_int+opt.mgcDim]
+            if opt.cuda:
+                fake = fake.cuda()
+                fake_crop = fake_crop.cuda()
             output = netD(fake_crop.detach())
             # errD_fake = criterion(output, label)
             errD_fake = torch.mean((fake_label - output) ** 2)
