@@ -10,124 +10,147 @@ import torch.backends.cudnn as cudnn
 import torch.optim as optim
 import torch.utils.data
 from torch.autograd import Variable
+from torch.autograd import grad as torch_grad
 
 from data_loader import get_loader, prepare_normalizer
 from utils import plot_feats, read_binary_file
-from models import define_netD, define_netG
+from models_wgan import define_netD, define_netG
+
+num_steps = 0
+gp_weight = 10
+critic_iterations = 5
+
+def calc_gradient_penalty(netD, real_data, fake_data):
+    # print('----------', real_data.size())
+    alpha = torch.FloatTensor(opt.batchSize,1,1,1).uniform_(0,1)
+    alpha = alpha.expand(opt.batchSize, real_data.size(1), real_data.size(2), real_data.size(3))
+    
+    alpha = alpha.cuda() if opt.cuda else alpha
+
+    interpolates = alpha * real_data + ((1 - alpha) * fake_data)
+
+    if opt.cuda:
+        interpolates = interpolates.cuda()
+    interpolates = Variable(interpolates, requires_grad=True)
+
+    disc_interpolates = netD(interpolates)
+
+    gradients = torch_grad(outputs=disc_interpolates, inputs=interpolates,
+                              grad_outputs=torch.ones(disc_interpolates.size()).cuda() if opt.cuda else torch.ones(
+                                  disc_interpolates.size()),
+                              create_graph=True, retain_graph=True, only_inputs=True)[0]
+
+    gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * 10  # LAMBDA
+    return gradient_penalty
 
 
 def train(netD, netG, data_loader, opt):
     label = torch.FloatTensor(1)
     label = Variable(label, requires_grad=False)
     real_label = 1
-    fake_label = 0
+    fake_label = -1
 
     # cost criterion
     # criterion = nn.BCELoss() # normal gan 
-    criterion = nn.MSELoss() # lsgan
+    # criterion = nn.MSELoss() # lsgan
 
     if opt.cuda:
         netD.cuda()
         netG.cuda()
-        criterion.cuda()
+        # criterion.cuda()
+    
+    one = torch.FloatTensor([1])
+    mone = one * -1
+    if opt.cuda:
+        one = one.cuda()
+        mone = mone.cuda()
     
     # setup optimizer
     optimizerD = optim.Adam(netD.parameters(), lr=0.0001, betas=(0.5, 0.999))
     optimizerG = optim.Adam(netG.parameters(), lr=0.0002, betas=(0.5, 0.999))
-    print('batch size =', opt.batchSize)
-    for epoch in range(opt.niter):
-        # store mini-batch data in list
-        for i, (real_data, pred_data) in enumerate(data_loader):
-            # print(real_data.shape, pred_data.shape)
-            #################################
-            # (1) Updata D network: maximize log(D(x)) + log(1 - D(G(z)))
-            #################################
-            # clear the gradient buffers
-            netD.zero_grad()
 
-            # crop the tensor to fixed size
-            rand_int = random.randint(0,real_data.size(-1) - opt.mgcDim)
-            real_data_crop = real_data[:,:,:,rand_int:rand_int+opt.mgcDim]
-            # label = torch.full((real_data.size(0),), real_label)
-            # print(f'shape of real_data_crop {real_data_crop.shape}')
+    print('batch size =', opt.batchSize)
+    for epoch in range(opt.niter):      
+
+        for i, (real_data, pred_data) in enumerate(data_loader):
+            # Discriminator update
+            for p in netD.parameters():  # reset requires_grad
+                p.requires_grad = True  # they are set to False below in netG update
+            
+            for _ in range(5):
+                # clear the gradient buffers
+                netD.zero_grad()
+
+                # crop the tensor to fixed size
+                rand_int = random.randint(0,real_data.size(-1) - (opt.mgcDim-1))
+                real_data_crop = real_data[:,:,:,rand_int:rand_int+opt.mgcDim-1]
+                noise = torch.FloatTensor(real_data.size()).normal_(0,1)
+                if opt.cuda:
+                    pred_data = pred_data.cuda()
+                    real_data_crop = real_data_crop.cuda()
+                    noise = noise.cuda()                
+                pred_data = Variable(pred_data)
+                real_crop = Variable(real_data_crop)
+                
+                # train with real
+                d_real = netD(real_crop)
+                d_real = d_real.mean()
+                d_real.backward(mone)
+
+                # train with fake 
+                fake = netG(noise, pred_data) + pred_data
+                fake_data_crop = fake[:,:,:,rand_int:rand_int+opt.mgcDim-1]
+                fake_crop = Variable(fake_data_crop)
+                d_generated = netD(fake_crop)
+                d_generated = d_generated.mean()
+                d_generated.backward(one)
+
+                gradient_penalty = calc_gradient_penalty(netD, real_crop, fake_crop)
+                gradient_penalty.backward()
+
+                d_loss = d_generated - d_real + gradient_penalty
+                optimizerD.step()
+
+            
+            # Generator update
+            for p in netD.parameters():
+                p.requires_grad = False  # to avoid computation
+            
+            netG.zero_grad()
+            rand_int = random.randint(0,real_data.size(-1) - (opt.mgcDim-1))
+            real_data_crop = real_data[:,:,:,rand_int:rand_int+opt.mgcDim-1]
             noise = torch.FloatTensor(real_data.size()).normal_(0,1)
             if opt.cuda:
                 pred_data = pred_data.cuda()
-                # label = label.cuda()
                 real_data_crop = real_data_crop.cuda()
-                noise = noise.cuda()
+                noise = noise.cuda()                
+            pred_data = Variable(pred_data, requires_grad=True)
+            real_crop = Variable(real_data_crop, requires_grad=True)
 
-            pred_data = Variable(pred_data)
-            real_data_crop = Variable(real_data_crop)
-
-            # train with real
-            output = netD(real_data_crop)
-            # errD_real = criterion(output, label)
-            errD_real = torch.mean((real_label - output) ** 2)
-            errD_real.backward()
-            D_x = output.data.mean()
-
-            # train with fake 
-            fake = netG(noise, pred_data)
-            # add the residual to the tts predicted data 
-            fake = fake + pred_data
-            # crop the tensor to fixed size
-            fake_crop = fake[:,:,:,rand_int:rand_int+opt.mgcDim]
-            output = netD(fake_crop.detach())
-            # errD_fake = criterion(output, label)
-            errD_fake = torch.mean((fake_label - output) ** 2)
-            errD_fake.backward()
-
-            D_G_z1 = output.data.mean()
-            errD = (errD_real.item() + errD_fake.item())
-            # update the discriminator on mini batch
-            optimizerD.step()
-            
-            ############################
-            # (2) Update G network: maximize log(D(G(z)))
-            ############################
-            netG.zero_grad()
-            output = netD(fake_crop)
-            # errG = criterion(output, label)
-            errG = torch.mean((real_label - output) ** 2)
-
-            if 1:
-                errRes = nn.MSELoss()(fake, real_data)
-                g_loss = errRes + 10 * errG
-            else:
-                g_loss = errG
-            g_loss.backward()
-            D_G_z2 = output.data.mean()
+            fake = netG(noise, pred_data) + pred_data
+            fake_data_crop = fake[:,:,:,rand_int:rand_int+opt.mgcDim-1]
+            fake_crop = Variable(fake_data_crop, requires_grad=True)
+            d_generated = netD(fake_crop)
+            d_generated = d_generated.mean()
+            d_generated.backward(mone)
+            # if 0:
+            #     errRes = nn.MSELoss()(fake, real_data)
+            #     g_loss = errRes + errG
+            # else:
+            #     g_loss = errG
             optimizerG.step()
 
-            print('[%d/%d][%d/%d] Loss_D: %.4f Loss_G: %.4f D(x): %.4f D(G(z)): %.4f / %.4f'
+            print('[%d/%d][%d/%d] Loss_D: %.4f D(G(z)): %.4f'
                 %(epoch, opt.niter, i, len(data_loader),
-                errD, errG.item(), D_x, D_G_z1, D_G_z2))
-            
-            if (epoch % 20 == 0) and (epoch != 0):
-                
-                fake = netG(noise, pred_data)
-                fake = fake + pred_data
-                fake = fake.data.cpu().numpy()
-                fake = fake.reshape(opt.mgcDim, -1)
-                fake = fake[:,rand_int:rand_int+opt.mgcDim]
-                    
-                pred = pred_data.data.cpu().numpy()
-                pred = pred.reshape(opt.mgcDim, -1)
-                pred = pred[:,rand_int:rand_int+opt.mgcDim]
-                    
-                real = real_data.cpu().numpy()
-                real = real.reshape(opt.mgcDim, -1)
-                real = real[:,rand_int:rand_int+opt.mgcDim]
-                plot_feats(real, pred, fake,  epoch, i, opt.outf)
+                d_loss, d_generated.item()))
             
             
-            del errD_fake, errD_real, errG, real_data, pred_data, 
-            del noise, real_data_crop, fake, fake_crop, output, errD
+            del real_data, pred_data, 
+            del noise, real_data_crop, fake, fake_crop
             torch.cuda.empty_cache()
 
         # do checkpointing
-        if (epoch % 40 == 0) and (epoch != 0):
+        if (epoch % 20 == 0) and (epoch != 0):
             torch.save(netG.state_dict(), '%s/netG_epoch_%d.pth' %(opt.outf, epoch))
             torch.save(netD.state_dict(), '%s/netD_epoch_%d.pth' %(opt.outf, epoch))
 
