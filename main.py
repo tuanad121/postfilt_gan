@@ -47,7 +47,7 @@ def train(netD, netG, data_loader, opt):
 
             # crop the tensor to fixed size
             rand_int = random.randint(0,real_data.size(-1) - opt.mgcDim)
-            real_data_crop = real_data[:,:,:,rand_int:rand_int+opt.mgcDim]
+            real_data_crop = real_data[:,:,:,rand_int:rand_int+opt.mgcDim-1]
             # label = torch.full((real_data.size(0),), real_label)
             # print(f'shape of real_data_crop {real_data_crop.shape}')
             noise = torch.FloatTensor(real_data.size()).normal_(0,1)
@@ -73,7 +73,8 @@ def train(netD, netG, data_loader, opt):
             # add the residual to the tts predicted data 
             fake = fake + pred_data
             # crop the tensor to fixed size
-            fake_crop = fake[:,:,:,rand_int:rand_int+opt.mgcDim]
+            rand_int = random.randint(0,real_data.size(-1) - opt.mgcDim)
+            fake_crop = fake[:,:,:,rand_int:rand_int+opt.mgcDim-1]
             if opt.cuda:
                 fake = fake.cuda()
                 fake_crop = fake_crop.cuda()
