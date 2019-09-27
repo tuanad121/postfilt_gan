@@ -53,6 +53,7 @@ def train(netD, netG, data_loader, opt):
             noise = torch.FloatTensor(real_data.size()).normal_(0,1)
             if opt.cuda:
                 pred_data = pred_data.cuda()
+                real_data = real_data.cuda()
                 # label = label.cuda()
                 real_data_crop = real_data_crop.cuda()
                 noise = noise.cuda()
