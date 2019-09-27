@@ -22,8 +22,8 @@ critic_iterations = 5
 
 def calc_gradient_penalty(netD, real_data, fake_data):
     print('----------', real_data.size(), fake_data.size())
-    alpha = torch.FloatTensor(opt.batchSize,1,1,1).uniform_(0,1)
-    alpha = alpha.expand(opt.batchSize, real_data.size(1), real_data.size(2), real_data.size(3))
+    alpha = torch.FloatTensor(real_data.size(0),1,1,1).uniform_(0,1)
+    alpha = alpha.expand(real_data.size(0), real_data.size(1), real_data.size(2), real_data.size(3))
     
     alpha = alpha.cuda() if opt.cuda else alpha
 
