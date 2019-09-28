@@ -91,19 +91,24 @@ def train(netD, netG, data_loader, opt):
             ############################
             # (2) Update G network: maximize log(D(G(z)))
             ############################
-            netG.zero_grad()
-            output = netD(fake_crop)
-            # errG = criterion(output, label)
-            errG = torch.mean((real_label - output) ** 2)
+            for _ in range(5):
+                netG.zero_grad()
+                rand_int = random.randint(0,real_data.size(-1) - opt.mgcDim)
+                fake_crop = fake[:,:,:,rand_int:rand_int+opt.mgcDim-1]
+                if opt.cuda:
+                    fake_crop = fake_crop.cuda()
+                output = netD(fake_crop)
+                # errG = criterion(output, label)
+                errG = torch.mean((real_label - output) ** 2)
 
-            if 1:
-                errRes = nn.MSELoss()(fake, real_data)
-                g_loss = errRes + 10 * errG
-            else:
-                g_loss = errG
-            g_loss.backward()
-            D_G_z2 = output.data.mean()
-            optimizerG.step()
+                if 0:
+                    errRes = nn.MSELoss()(fake, real_data)
+                    g_loss = errRes + 10 * errG
+                else:
+                    g_loss = errG
+                g_loss.backward()
+                D_G_z2 = output.data.mean()
+                optimizerG.step()
 
             print('[%d/%d][%d/%d] Loss_D: %.4f Loss_G: %.4f D(x): %.4f D(G(z)): %.4f / %.4f'
                 %(epoch, opt.niter, i, len(data_loader),
@@ -168,7 +173,7 @@ if __name__ == "__main__":
     parser.add_argument('--xFilesList', required=True, help='path to input files list')
     parser.add_argument('--yFilesList', required=True, help='path to output files list')
     parser.add_argument('--workers', type=int, help='number of data loading workers', default=2)
-    parser.add_argument('--batchSize', type=int, default=32, help='input batch size')
+    parser.add_argument('--batchSize', type=int, default=64, help='input batch size')
     parser.add_argument('--mgcDim', type=int, default=40, help='mel-cepstrum dimension')
     parser.add_argument('--nz', type=int, default=100, help='size of the latent z vector')
     parser.add_argument('--niter', type=int, default=200, help='number of epochs to train for')
