@@ -91,11 +91,17 @@ def train(netD, netG, data_loader, opt):
             ############################
             # (2) Update G network: maximize log(D(G(z)))
             ############################
-            netG.zero_grad()
+            
             for _ in range(5):
+                netG.zero_grad()
+                # train with fake 
+                fake = netG(noise, pred_data)
+                # add the residual to the tts predicted data 
+                fake = fake + pred_data
                 rand_int = random.randint(0,real_data.size(-1) - opt.mgcDim)
                 fake_crop = fake[:,:,:,rand_int:rand_int+opt.mgcDim-1]
                 if opt.cuda:
+                    fake = fake.cuda()
                     fake_crop = fake_crop.cuda()
                 output = netD(fake_crop)
                 # errG = criterion(output, label)
@@ -108,7 +114,7 @@ def train(netD, netG, data_loader, opt):
                     g_loss = errG
                 g_loss.backward()
                 D_G_z2 = output.data.mean()
-            optimizerG.step()
+                optimizerG.step()
 
             print('[%d/%d][%d/%d] Loss_D: %.4f Loss_G: %.4f D(x): %.4f D(G(z)): %.4f / %.4f'
                 %(epoch, opt.niter, i, len(data_loader),
