@@ -107,9 +107,9 @@ def train(netD, netG, data_loader, opt):
                 # errG = criterion(output, label)
                 errG = torch.mean((real_label - output) ** 2)
 
-                if 0:
+                if 1:
                     errRes = nn.MSELoss()(fake, real_data)
-                    g_loss = errRes + 10 * errG
+                    g_loss = 10 * errRes + errG
                 else:
                     g_loss = errG
                 g_loss.backward()
