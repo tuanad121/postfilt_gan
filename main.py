@@ -92,7 +92,7 @@ def train(netD, netG, data_loader, opt):
             # (2) Update G network: maximize log(D(G(z)))
             ############################
             
-            for _ in range(5):
+            for _ in range(2):
                 netG.zero_grad()
                 # train with fake 
                 fake = netG(noise, pred_data)
