@@ -109,7 +109,7 @@ def train(netD, netG, data_loader, opt):
 
                 if 1:
                     errRes = nn.MSELoss()(fake, real_data)
-                    g_loss = 10 * errRes + errG
+                    g_loss = errRes + 10 * errG
                 else:
                     g_loss = errG
                 g_loss.backward()
@@ -143,7 +143,7 @@ def train(netD, netG, data_loader, opt):
             torch.cuda.empty_cache()
 
         # do checkpointing
-        if (epoch % 40 == 0) and (epoch != 0):
+        if (epoch % 20 == 0) and (epoch != 0):
             torch.save(netG.state_dict(), '%s/netG_epoch_%d.pth' %(opt.outf, epoch))
             torch.save(netD.state_dict(), '%s/netD_epoch_%d.pth' %(opt.outf, epoch))
 
